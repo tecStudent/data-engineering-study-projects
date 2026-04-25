@@ -1,0 +1,90 @@
+services:
+  postgres:
+    image: postgres:18
+    container_name: weather_postgres
+    environment:
+      PYTHONPATH: /opt/airflow
+      POSTGRES_USER: weather
+      POSTGRES_PASSWORD: weather
+      POSTGRES_DB: weather
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U weather -d weather"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  airflow-init:
+    build: .
+    user: "${AIRFLOW_UID:-50000}:0"
+    container_name: airflow_init
+    env_file:
+      - .env
+    environment:
+      PYTHONPATH: /opt/airflow
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: >
+      bash -c "
+      airflow db migrate &&
+      airflow users create
+      --username admin
+      --firstname Pedro
+      --lastname Admin
+      --role Admin
+      --email admin@local
+      --password admin
+      "
+    volumes:
+      - ./airflow/dags:/opt/airflow/dags
+      - ./src:/opt/airflow/src
+      - ./storage:/opt/airflow/storage
+
+  airflow-webserver:
+    build: .
+    user: "${AIRFLOW_UID:-50000}:0"
+    container_name: airflow_webserver
+    restart: always
+    env_file:
+      - .env
+    environment:
+      PYTHONPATH: /opt/airflow
+    depends_on:
+      postgres:
+        condition: service_healthy
+      airflow-init:
+        condition: service_completed_successfully
+    command: webserver
+    ports:
+      - "8081:8080"
+    volumes:
+      - ./airflow/dags:/opt/airflow/dags
+      - ./src:/opt/airflow/src
+      - ./storage:/opt/airflow/storage
+
+  airflow-scheduler:
+    build: .
+    user: "${AIRFLOW_UID:-50000}:0"
+    container_name: airflow_scheduler
+    restart: always
+    env_file:
+      - .env
+    environment:
+      PYTHONPATH: /opt/airflow
+    depends_on:
+      postgres:
+        condition: service_healthy
+      airflow-init:
+        condition: service_completed_successfully
+    command: scheduler
+    volumes:
+      - ./airflow/dags:/opt/airflow/dags
+      - ./src:/opt/airflow/src
+      - ./storage:/opt/airflow/storage
+
+volumes:
+  postgres_data:
