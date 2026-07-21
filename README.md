@@ -85,4 +85,3 @@ The execution and sprint progress of the `weather-etl` project is being tracked 
 
 [Weather ETL Sprint Plan](https://lava-ridge-12d.notion.site/Plano-de-Sprints-Weather-ETL-34caba75252180fd92c7f77844ed47fa)
 
->>>>>>> e5550c9 (feat: setup local weather ETL environment with Airflow and raw ingestion)
